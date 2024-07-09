@@ -1,0 +1,6 @@
+.venv
+/flask_session/*
+Example.csv
+myfile.json
+
+scripts/py/__pycache__/*

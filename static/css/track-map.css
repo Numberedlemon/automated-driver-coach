@@ -1,0 +1,30 @@
+#charts {
+    display: flex;
+    justify-content: left;
+}
+
+.chart {
+    width: 300px;
+    height: 300px;
+    margin: 10px;
+    padding: 10px;
+}
+
+.tooltip {
+    position: absolute;
+    text-align: center;
+    width: 60px;
+    height: 15px;
+    padding: 2px;
+    font: 12px sans-serif;
+    background: lightsteelblue;
+    border: 0px;
+    border-radius: 8px;
+    pointer-events: none;
+}
+
+.line {
+    fill: none;
+    stroke: steelblue;
+    stroke-width: 2px;
+}
