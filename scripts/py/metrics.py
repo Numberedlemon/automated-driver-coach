@@ -2,20 +2,24 @@ import pandas as pd
 from scripts.py.vbox_parser import parse_file, parse_dataframe
 from scripts.py.corner_detection import detect_corners
 
-def calculate_metrics(df):
+def calculate_metrics(df,lap):
 
     # calculate velocity metrics
-    vel_metrics = calculate_velocity_metrics(df)
+    vel_metrics = calculate_velocity_metrics(df, lap)
     
     return vel_metrics
 
-def calculate_velocity_metrics(df):
+def calculate_velocity_metrics(df, lap):
+
+    df = df[df["LapNumber"] == lap]
 
     # aggregation by group, calculation of group mean, min, and max.
     metrics = df.groupby('section').agg({'Velocity': ["min", "mean", "max"]}).reset_index()
 
     # make DataFrame.
     df_metrics = pd.DataFrame(metrics)
+
+    print(metrics)
 
     # dump DataFrame to json file.
 
@@ -48,6 +52,6 @@ if __name__ == "__main__":
 
     detect_corners(data)
 
-    calculate_metrics(data)
+    calculate_velocity_metrics(data)
     
     generate_acceleration_report(data)

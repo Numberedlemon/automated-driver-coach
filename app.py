@@ -1,9 +1,11 @@
-from flask import Flask, session, redirect, request, render_template
+from flask import Flask, session, redirect, request, render_template, jsonify
 from flask_session import Session
 import pandas as pd
 from scripts.py.metrics import calculate_metrics
 from scripts.py.corner_detection import detect_corners
 from scripts.py.vbox_parser import parse_dataframe, parse_file
+import re
+import json
 
 
 """
@@ -29,15 +31,49 @@ app.config["SECRET_KEY"] = "testing"
 app.config["SESSION_TYPE"] = "filesystem"
 Session(app)
 
-# basic route for uploading file.
-@app.route('/', methods = ['GET','POST'])
+@app.route('/', methods=['GET', 'POST'])
 def upload():
     if request.method == "POST":
-        file = request.files['file']
-        if file:
-            df = parse_file(file)
-            session['data'] = df.to_json()
-            return redirect('/upload')
+        files = request.files.getlist('files')
+
+        print(f"Received files: {[file.filename for file in files]}")
+
+        if not files or files[0].filename == '':
+            return 'No file selected'
+        
+        dfs = []
+        lap_numbers = set()
+        for file in files:
+            if file:
+                # Extract the lap number from the filename using regex
+                match = re.search(r'Lap (\d+)', file.filename)
+                if match:
+                    lap_number = int(match.group(1))
+                    lap_numbers.add(lap_number)
+                else:
+                    lap_number = None  # Default value if lap number is not found
+
+
+                # Parse the file into a DataFrame
+                df = parse_file(file)
+                
+                # Add the lap number as a new column
+                df['LapNumber'] = lap_number
+                
+                # Append the DataFrame to the list
+                dfs.append(df)
+        
+        if dfs:
+            # Concatenate all DataFrames in the list
+            concatenated_df = pd.concat(dfs, ignore_index=True)
+            
+            # Store the concatenated DataFrame in the session as JSON
+            session['data'] = concatenated_df.to_json()
+            session['lap_numbers'] = sorted(lap_numbers)
+            
+        
+        return redirect('/upload')
+    
     return render_template('index.html')
 
 # data upload screen
@@ -62,31 +98,58 @@ def track_map():
     return render_template('track-map.html', data = df)
 
 # metrics screen
-@app.route('/metrics')
+@app.route('/metrics',)
 def metrics():
 
-    df = session.get('data')
+    lap_numbers = session.get('lap_numbers')
+    lap = 1
+    if 'data' not in session:
+        return redirect('/upload')
+    
+    df = pd.read_json(session['data'])
+    print(df)
 
-    df = pd.read_json(df)
+    #print(f"Printing DF: {df}")
 
-    metrics_agg = run_data_analysis(df)
+    metrics_agg = run_data_analysis(df, lap)
+
+    print(f"Aggregated metrics: \n {metrics_agg}")
 
     metrics_agg = metrics_agg.to_json()
 
     #logging.debug(f'Analysis results: {results}')
-    return render_template('metrics.html', data = metrics_agg)
+    return render_template('metrics.html', data = metrics_agg, lap_numbers= lap_numbers, selected_lap=lap)
 
-def run_data_analysis(df):
+# metrics screen
+@app.route('/update/<int:lap_number>', endpoint = "update")
+def metrics(lap_number):
 
-    data = parse_dataframe(df)
+    lap = lap_number
+    if 'data' not in session:
+        return redirect('/upload')
     
-    detect_corners(data)
+    df = pd.read_json(session['data'])
+    print(df)
 
-    metrics = calculate_metrics(data)
+    #print(f"Printing DF: {df}")
+
+    metrics_agg = run_data_analysis(df, lap)
+
+    print(f"Aggregated metrics: \n {metrics_agg}")
+
+    metrics_agg = metrics_agg.to_json()
+    print(metrics_agg)
+
+    #logging.debug(f'Analysis results: {results}')
+    return metrics_agg
+
+def run_data_analysis(df, lap):
+
+    detect_corners(df)
+
+    metrics = calculate_metrics(df, lap)
 
     return metrics
-
-
 
 if __name__ == '__main__':
     app.run(debug=True)

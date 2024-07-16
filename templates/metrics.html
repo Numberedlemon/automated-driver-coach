@@ -5,6 +5,7 @@
     <title>Velocity Metrics</title>
     <meta charset="UTF-8">
     <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <style>
         #charts {
             display: flex;
@@ -40,6 +41,15 @@
         <div id = "chart"></div>
     </div>
     <div class="dropdown">
+        <label for="lap">Select Lap: </label>
+        <select id="lap" name="lap">
+          <option value="all" {% if selected_lap == 'all' %}selected{% endif %}>All Laps</option>
+          {% for lap_number in lap_numbers %}
+            <option value="{{ lap_number }}" {% if selected_lap == lap_number %}selected{% endif %}>Lap {{ lap_number }}</option>
+          {% endfor %}
+        </select>
+    </div>
+    <div class="dropdown">
         <label for="aggregation">Select Aggregation: </label>
         <select id="aggregation">
             <option value="min">Min</option>
@@ -54,160 +64,191 @@
         <label for="radioStraights">Straights</label>
     </div>
 
+
     <script>
-            // Fetch data from the Flask backend
-            const data = {{data|safe}};
+        // Function to fetch data and create chart
+        function fetchDataAndCreateChart(selectedLap) {
+            // Send AJAX request to Flask backend
+            $.ajax({
+                type: 'GET',  // Use GET method for fetching data based on URL parameter
+                contentType: 'application/json',
+                url: `/update/${selectedLap}`,  // Endpoint with selected lap number
+                success: function(response) {
+                    const data = JSON.parse(response);
+                    console.log(data);
+                    if (data && data["('section', '')"] && data["('Velocity', 'min')"]) {
+                        createChart(data);
+                    } else {
+                        console.error('Invalid data format or missing properties');
+                    }
+                },
+                error: function(error) {
+                    console.log(error);
+                }
+            });
+        }
 
-            createChart(data);
-    
-            // Function to create the chart
-            function createChart(data) {
+        // Function to create the chart
+        function createChart(data) {
+            // Remove any existing SVG
+            d3.select("#chart").select("svg").remove();
 
-                // set margins
-                const width = 500;
-                const height = 500;
-                const margin = {top: 20, right: 30, bottom: 40, left: 50};
+            // Parse JSON data
+            const sections = Object.values(data["('section', '')"]);
+            const minVelocities = Object.values(data["('Velocity', 'min')"]);
+            const meanVelocities = Object.values(data["('Velocity', 'mean')"]);
+            const maxVelocities = Object.values(data["('Velocity', 'max')"]);
 
-                // make svg and append
-                const svg = d3.select("#chart").append("svg")
-                    .attr("width", width + margin.left + margin.right)
-                    .attr("height", height + margin.top + margin.bottom)
-                    .append("g")
-                    .attr("transform", `translate(${margin.left},${margin.top})`);
+            // Your D3.js chart creation and update logic here
+            // Example: Create a scatter plot with D3.js
+            // (Replace with your actual chart creation logic)
+            const margin = { top: 20, right: 30, bottom: 80, left: 50 }; // Increased bottom margin for x-axis labels
+            const width = 600 - margin.left - margin.right;
+            const height = 400 - margin.top - margin.bottom;
 
-                const x = d3.scaleBand()
-                    .rangeRound([0, width])
-                    .padding(0.1);
-    
-                const y = d3.scaleLinear()
-                    .rangeRound([height - 20, 0]);
-    
-                const xAxis = svg.append("g")
-                    .attr("transform", `translate(0,${height - 20})`);
-    
-                const yAxis = svg.append("g");
+            const svg = d3.select("#chart")
+                        .append("svg")
+                        .attr("width", width + margin.left + margin.right)
+                        .attr("height", height + margin.top + margin.bottom)
+                        .append("g")
+                        .attr("transform", `translate(${margin.left},${margin.top})`);
 
-                                    // Add X axis label
-                svg.append("text")
-                    .attr("class", "x label")
-                    .attr("text-anchor", "middle")
-                    .attr("x", width - margin.right + 20)
-                    .attr("y", height + margin.bottom - 5)
-                    .text("Section");
+            const xScale = d3.scaleBand()
+                            .domain(sections)
+                            .range([0, width])
+                            .padding(0.1);
 
-                // Add Y axis label
-                svg.append("text")
-                    .attr("class", "y label")
-                    .attr("text-anchor", "end")
-                    .attr("y", -margin.left)
-                    .attr("x", -margin.top)
-                    .attr("dy", ".75em")
-                    .attr("transform", "rotate(-90)")
-                    .text("Velocity [kph]");
-        
-                            // Define the updateChart function with aggregation and plotType parameters
-                const updateChart = (aggregation, plotType) => {
-                    const sections = Object.entries(data["('section', '')"])
-                        .map(([index, name]) => ({ index: +index, name }));
+            const yScale = d3.scaleLinear()
+                            .domain([0, d3.max(maxVelocities)])
+                            .nice()
+                            .range([height, 0]);
 
-                    // Custom sort function to order sections like "Corner" and "Straight"
-                    sections.sort((a, b) => {
-                        const aName = a.name.toLowerCase();
-                        const bName = b.name.toLowerCase();
-                        
-                        // Extract the type (Corner or Straight) and numeric part
-                        const aType = aName.split(' ')[0];
-                        const bType = bName.split(' ')[0];
-                        
-                        // If types are different, order by type first
-                        if (aType !== bType) {
-                            return aType.localeCompare(bType);
-                        } else {
-                            // If types are the same, order by the numeric part
-                            const aNumber = parseInt(aName.split(' ')[1]);
-                            const bNumber = parseInt(bName.split(' ')[1]);
-                            return aNumber - bNumber;
-                        }
+            const xAxis = svg.append("g")
+                            .attr("transform", `translate(0,${height})`)
+                            .call(d3.axisBottom(xScale));
+
+            const yAxis = svg.append("g")
+                            .call(d3.axisLeft(yScale));
+
+            // Add x-axis label
+            svg.append("text")
+                .attr("class", "x label")
+                .attr("text-anchor", "middle")
+                .attr("x", width / 2)
+                .attr("y", height + margin.bottom - 10)
+                .style("font-size", "12px")
+                .text("Sections");
+
+            // Add y-axis label
+            svg.append("text")
+                .attr("class", "y label")
+                .attr("text-anchor", "middle")
+                .attr("transform", "rotate(-90)")
+                .attr("x", -height / 2)
+                .attr("y", -margin.left + 15)
+                .style("font-size", "12px")
+                .text("Velocity [kph]");
+
+            // Define the updateChart function with aggregation and plotType parameters
+            const updateChart = (data, aggregation, plotType) => {
+                const sections = Object.entries(data["('section', '')"])
+                    .map(([index, name]) => ({ index: +index, name }));
+
+                // Filter sections based on plotType (corners or straights)
+                let filteredSections;
+                if (plotType === 'corners') {
+                    filteredSections = sections.filter(section => section.name.startsWith('Corner'));
+                } else if (plotType === 'straights') {
+                    filteredSections = sections.filter(section => section.name.startsWith('Straight'));
+                } else {
+                    filteredSections = sections; // Default to all sections if plotType is not specified
+                }
+
+                // Extract names and values based on filtered sections
+                const filteredValues = filteredSections.map(section => data[`('Velocity', '${aggregation}')`][section.index]);
+
+                // Update xScale domain with filtered sections
+                xScale.domain(filteredSections.map(section => section.name));
+                xAxis.transition().duration(750).call(d3.axisBottom(xScale))
+                    .selectAll("text")
+                    .style("text-anchor", "end")
+                    .attr("transform", "rotate(-45)")
+                    .style("font-size", "12px")
+                    .attr("dy", "0.35em") // Adjust label position
+                    .attr("dx", "-0.8em"); // Adjust label position
+
+                // Update yScale domain with filtered values
+                yScale.domain([0, d3.max(filteredValues)]).nice();
+                yAxis.transition().duration(750).call(d3.axisLeft(yScale));
+
+                // Join the filtered data to the circles
+                const circles = svg.selectAll(".circle")
+                    .data(filteredValues);
+
+                // Remove exiting circles
+                circles.exit().transition().duration(750).attr("r", 0).remove();
+
+                // Add new circles
+                circles.enter().append("circle")
+                    .attr("class", "circle")
+                    .attr("cx", (d, i) => xScale(filteredSections[i].name) + xScale.bandwidth() / 2)
+                    .attr("cy", height) // Start at the bottom
+                    .attr("r", 0) // Start with radius 0
+                    .attr("fill", d => {
+                        if (aggregation === 'min') return "steelblue";
+                        else if (aggregation === 'mean') return "orange";
+                        else if (aggregation === 'max') return "red";
+                    })
+                    .transition().duration(750)
+                    .attr("cy", d => yScale(d))
+                    .attr("r", 5);
+
+                // Update existing circles
+                circles.transition().duration(750)
+                    .attr("cx", (d, i) => xScale(filteredSections[i].name) + xScale.bandwidth() / 2)
+                    .attr("cy", d => yScale(d))
+                    .attr("r", 5)
+                    .attr("fill", d => {
+                        if (aggregation === 'min') return "steelblue";
+                        else if (aggregation === 'mean') return "orange";
+                        else if (aggregation === 'max') return "red";
                     });
 
-                    // Separate Corner and Straight sections
-                    const cornerSections = sections.filter(section => section.name.startsWith('Corner'));
-                    const straightSections = sections.filter(section => section.name.startsWith('Straight'));
+                // Update the current plot type after the chart is updated
+                currentPlotType = plotType;
+            };
 
-                    let filteredSections, filteredValues;
+            // Initialize flags and variables
+            let currentPlotType = ''; // Track the current plot type
 
-                    if (plotType === 'corners') {
-                        filteredSections = cornerSections;
-                    } else if (plotType === 'straights') {
-                        filteredSections = straightSections;
-                    } else {
-                        filteredSections = sections; // Default to all sections if plotType is not specified
-                    }
+            // Initial chart setup
+            updateChart(data, "min", "corners"); // Initial aggregation and plot type
 
-                    // Extract names and values based on filtered sections
-                    filteredValues = filteredSections.map(section => data[`('Velocity', '${aggregation}')`][section.index]);
+            // Event listener for aggregator selector dropdown
+            d3.select("#aggregation").on("change", function() {
+                const selectedAggregation = this.value;
+                const selectedPlotType = d3.select('input[name="plotType"]:checked').node().value;
+                updateChart(data, selectedAggregation, selectedPlotType);
+            });
 
-                    x.domain(filteredSections.map(section => section.name));
-                    y.domain([0, d3.max(filteredValues)]);
+            // Event listeners for radio buttons (plot type)
+            d3.selectAll('input[name="plotType"]').on("change", function() {
+                const selectedPlotType = this.value;
+                const selectedAggregation = d3.select("#aggregation").node().value;
+                updateChart(data, selectedAggregation, selectedPlotType);
+            });
 
-                    // Update x-axis only if it's the first time or the plot type changes
-                    if (!xAxisInitialized || currentPlotType !== plotType) {
-                        xAxis.transition().duration(500).call(d3.axisBottom(x))
-                            .selectAll("text")
-                            .style("text-anchor", "end")
-                            .attr("transform", "rotate(-45)")
-                            .style("font-size", "12px");
-                        
-                        xAxisInitialized = true; // Set the flag to true after the initial setup
-                    }
+            // Event listener for lap select dropdown
+            $('#lap').change(function() {
+                const selectedLap = $(this).val();
+                fetchDataAndCreateChart(selectedLap);
+            });
+        }
 
-                    yAxis.transition().duration(500).call(d3.axisLeft(y));
+        // Initially load the data for the default lap
+        const initialLap = $('#lap').val();
+        fetchDataAndCreateChart(initialLap);
 
-                    const circles = svg.selectAll(".circle")
-                        .data(filteredValues);
-
-                    circles.enter().append("circle")
-                        .attr("class", "circle")
-                        .attr("fill", "steelblue")
-                        .attr("cx", (d, i) => x(filteredSections[i].name) + x.bandwidth() / 2)
-                        .attr("cy", d => y(d))
-                        .attr("r", 0) // Initially set radius to 0 for transition effect
-                        .transition().duration(750)
-                        .attr("r", 5)
-                        .delay((d, i) => i * 50);
-
-                    circles.transition().duration(750)
-                        .attr("cx", (d, i) => x(filteredSections[i].name) + x.bandwidth() / 2)
-                        .attr("cy", d => y(d))
-                        .attr("r", 5);
-
-                    circles.exit().remove();
-
-                    // Update the current plot type after the chart is updated
-                    currentPlotType = plotType;
-                };
-
-                // Initialize flags and variables
-                let xAxisInitialized = false;
-                let currentPlotType = ''; // Track the current plot type
-
-                // Initial chart setup
-                updateChart("min", "corners"); // Initial aggregation and plot type
-
-                // Event listener for aggregator selector dropdown
-                d3.select("#aggregation").on("change", function() {
-                    const selectedAggregation = this.value;
-                    const selectedPlotType = document.querySelector('input[name="plotType"]:checked').value;
-                    updateChart(selectedAggregation, selectedPlotType);
-                });
-
-                // Event listeners for radio buttons
-                d3.selectAll('input[name="plotType"]').on("change", function() {
-                    const selectedPlotType = this.value;
-                    const selectedAggregation = d3.select("#aggregation").property("value");
-                    updateChart(selectedAggregation, selectedPlotType);
-                });
-            }
-        </script>
+    </script>
 </body>
 </html>
