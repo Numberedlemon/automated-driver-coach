@@ -6,6 +6,7 @@ from scripts.py.corner_detection import detect_corners
 from scripts.py.vbox_parser import parse_dataframe, parse_file
 import re
 import json
+from io import StringIO
 
 
 """
@@ -90,15 +91,26 @@ def show_gg():
     return render_template('gg_diagram.html', data = df)
 
 # track map screen
-@app.route('/track-map')
+@app.route('/track-map', methods = ["POST", "GET"])
 def track_map():
 
     df = session.get('data')
 
-    return render_template('track-map.html', data = df)
+    df = pd.read_json(df)
+
+# Read the StringIO object into a DataFrame
+    lap = request.form.get('dropdown')
+
+    lap_numbers = session.get('lap_numbers')
+    
+    if lap is not None:
+        df = df[df["LapNumber"] == lap]
+        print(df)
+
+    return render_template('track-map.html', data = df.to_json(), lap_numbers= lap_numbers)
 
 # metrics screen
-@app.route('/metrics',)
+@app.route('/metrics')
 def metrics():
 
     lap_numbers = session.get('lap_numbers')
@@ -135,10 +147,7 @@ def metrics(lap_number):
 
     metrics_agg = run_data_analysis(df, lap)
 
-    print(f"Aggregated metrics: \n {metrics_agg}")
-
     metrics_agg = metrics_agg.to_json()
-    print(metrics_agg)
 
     #logging.debug(f'Analysis results: {results}')
     return metrics_agg

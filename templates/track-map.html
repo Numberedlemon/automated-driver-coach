@@ -6,7 +6,8 @@
     <meta charset="UTF-8">
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://d3js.org/d3-contour.v2.min.js"></script>
-    <link rel="stylesheet" href="./static/css/track-map.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <link rel="stylesheet" href="../static/css/track-map.css">
 </head>
 
 <body>
@@ -16,172 +17,146 @@
         <div id = "chart"></div>
         <div id = "chart2"></div>
     </div>
+    <div class="dropdown">
+        <form id="lapform">
+        <label for="lap">Select Lap: </label>
+        <select id="lap" name="lap">
+          <option value="all" {% if selected_lap == 'all' %}selected{% endif %}>All Laps</option>
+          {% for lap_number in lap_numbers %}
+            <option href="{{url_for('track_map',lap=lap_number)}}"value="{{ lap_number }}" {% if selected_lap == lap_number %}selected{% endif %}>Lap {{ lap_number }}</option>
+          {% endfor %}
+        </select>
+        </form>
+    </div>
 
-    <script>
-        // this does work, jinja is just weird.
-        const data = {{data|safe}};
+<script>
+// this does work, jinja is just weird.
+const data = {{data|safe}};
 
-        // get domain sizes by hand because json is weird
-        const xval = Object.values(data.Latitude)
-        const yval = Object.values(data.Longitude)
-        const zval = Object.values(data.Velocity)
-        const timeval = Object.values(data.Time)
+// Function to filter data rows by lap number
+function filterByLapNumber(data, lapNumber) {
+    const filteredRows = {};
 
-        const combinedData = [];
+    // Iterate through each key (which represents lap numbers)
+    for (let key in data.LapNumber) {
+    // Check if the lap number matches
+    if (Math.floor(data.LapNumber[key]) === lapNumber) {
+        // Store the entire row for this lap number
+        filteredRows[key] = {};
 
-        // put x and y values into array again...
-        for (let i = 0; i < xval.length; i++) {
-
-            combinedData.push({ x: xval[i], y: yval[i], z: zval[i], time: timeval[i]});
+        // Iterate through each field in the data object
+        for (let field in data) {
+        filteredRows[key][field] = data[field][key];
         }
+    }
+    }
+    return filteredRows;
+}
+        
+// Example usage
+const lapNumber = 3; // Specify the lap number to filter by
+const filteredData = filterByLapNumber(data, lapNumber);
 
-        function createTrackMap(data) {
+// Function to update the scatter plot based on lap number
+function createVisualization(data, lapNumber) {
 
-            // set margins
-            const width = 500;
-            const height = 500;
-            const margin = {top: 20, right: 30, bottom: 40, left: 50};
+d3.select("#chart").select("svg").remove();
 
-            // make svg and append
-            const svg = d3.select("#chart").append("svg")
-                .attr("width", width + margin.left + margin.right)
-                .attr("height", height + margin.top + margin.bottom)
-                .append("g")
-                .attr("transform", `translate(${margin.left},${margin.top})`);
+// Simulate fetching data based on selected lapNumber (replace with actual data fetching logic)
+const filteredData = filterByLapNumber(data, lapNumber);
 
-            const x = d3.scaleLinear()
-                .domain(d3.extent(data, d => d.x))
-                .range([0, width]);
+// Extracting the data into an array
+const dataArray = Object.values(filteredData).map(d => ({
+latitude: d.Latitude,
+longitude: d.Longitude,
+velocity: d.Velocity
+}));
 
-            const y = d3.scaleLinear()
-                .domain(d3.extent(data, d => d.y))
-                .range([height, 0]);
+const latitudes = dataArray.map(d => d.latitude);
+const longitudes = dataArray.map(d => d.longitude);
 
-            const colorScale = d3.scaleSequential()
-                .domain(d3.extent(data, d => d.z))
-                .interpolator(d3.interpolateViridis);
+const combinedData = [];
 
-            const xAxis = svg.append("g")
-                .attr("transform", `translate(0,${height})`)
-                .call(d3.axisBottom(x));
+// put x and y values into array again...
+for (let i = 0; i < latitudes.length; i++) {
+    combinedData.push({ x: latitudes[i], y: longitudes[i] });
+}
 
-            const yAxis = svg.append("g")
-                .call(d3.axisLeft(y));
+// set margins
+const width = 500;
+const height = 500;
+const margin = {top: 20, right: 30, bottom: 40, left: 50};
 
-            svg.append("text")
-            .attr("class", "x label")
-            .attr("text-anchor", "end")
-            .attr("x", width - margin.right + 20)
-            .attr("y", height + margin.bottom - 5)
-            .text("Latitude (deg W)");
+// make svg and append
+const svg = d3.select("#chart").append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`); // Remove existing circles for smooth transition
 
-            // Add Y axis label
-            svg.append("text")
-                .attr("class", "y label")
-                .attr("text-anchor", "end")
-                .attr("y", -margin.left)
-                .attr("x", -margin.top)
-                .attr("dy", ".75em")
-                .attr("transform", "rotate(-90)")
-                .text("Longitude (deg N)");
+// make axes
+const xScale = d3.scaleLinear()
+    .domain(d3.extent(combinedData, d => d.x))
+    .nice()
+    .range([height, 0]);
 
-            const updateChart = () => {
-                const circles = svg.selectAll(".circle")
-                    .data(data);
+const yScale = d3.scaleLinear()
+    .domain(d3.extent(combinedData, d => d.y))
+    .nice()
+    .range([height, 0]);
 
-                circles.enter().append("circle")
-                    .attr("class", "circle")
-                    .attr("cx", d => x(d.x))
-                    .attr("cy", d => y(d.y))
-                    .attr("r", 5)
-                    .style("fill", (d) => colorScale(d.z))
-                    .style("opacity", 0)
-                    .transition()
-                    .duration(500)
-                    .delay((d, i) => i * 2) // Cascading delay for each circle
-                    .style("opacity", 1);
+const xAxis = d3.axisBottom(xScale);
 
-                circles.exit().remove();
-            };
+const yAxis = d3.axisLeft(yScale);
 
-            updateChart();
-        }
+svg.append("g")
+    .attr("transform", `translate(0,${height})`)
+    .call(xAxis);
 
-        createTrackMap(combinedData);
+svg.append("g")
+    .call(yAxis);
 
-        function createVelocityTrace(data) {
-            
-            // set margins
-            const width = 500;
-            const height = 500;
-            const margin = {top: 20, right: 30, bottom: 40, left: 50};
+// Create and append scatter plot points
+svg.selectAll(".dot")
+    .data(combinedData)
+    .enter().append("circle")
+    .attr("class", "dot")
+    .attr("cx", d => xScale(d.x))
+    .attr("cy", d => yScale(d.y))
+    .attr("r", 3)
+    .attr("fill", "steelblue" )
+    .attr("opacity", 0.8)
 
-            // make svg and append
-            const svg = d3.select("#chart2").append("svg")
-                .attr("width", width + margin.left + margin.right)
-                .attr("height", height + margin.top + margin.bottom)
-                .append("g")
-                .attr("transform", `translate(${margin.left},${margin.top})`);
+      // Add X axis label
+svg.append("text")
+    .attr("class", "x label")
+    .attr("text-anchor", "end")
+    .attr("x", width - margin.right + 20)
+    .attr("y", height + margin.bottom - 5)
+    .text("Lateral Acceleration (G)");
 
-            const x = d3.scaleLinear()
-                .domain(d3.extent(data, d => d.time))
-                .range([0, width]);
+// Add Y axis label
+svg.append("text")
+    .attr("class", "y label")
+    .attr("text-anchor", "end")
+    .attr("y", -margin.left)
+    .attr("x", -margin.top)
+    .attr("dy", ".75em")
+    .attr("transform", "rotate(-90)")
+    .text("Longitudinal Acceleration (G)");
 
-            const y = d3.scaleLinear()
-                .domain(d3.extent(data, d => d.z))
-                .range([height, 0]);
+}
+// Initialize dropdown menu options
+const lapNumberDropdown = document.getElementById("lap");
 
-            const xAxis = svg.append("g")
-                .attr("transform", `translate(0,${height})`)
-                .call(d3.axisBottom(x));
+createVisualization(data, lapNumberDropdown.value)
 
-            const yAxis = svg.append("g")
-                .call(d3.axisLeft(y));
+// Event listener for dropdown change
+lapNumberDropdown.addEventListener("change", function() {
+    const selectedLapNumber = parseInt(this.value);
+    createVisualization(data, selectedLapNumber);
+});
+</script>
 
-            svg.append("text")
-                .attr("class", "x label")
-                .attr("text-anchor", "end")
-                .attr("x", width - margin.right + 20)
-                .attr("y", height + margin.bottom - 5)
-                .text("Time (s)");
-
-            // Add Y axis label
-            svg.append("text")
-                .attr("class", "y label")
-                .attr("text-anchor", "end")
-                .attr("y", -margin.left)
-                .attr("x", -margin.top)
-                .attr("dy", ".75em")
-                .attr("transform", "rotate(-90)")
-                .text("Velocity (kph)");
-
-            const updateChart = () => {
-
-            // Line generator
-            const line = d3.line()
-                .x(d => x(d.time))
-                .y(d => y(d.z));
-
-            // Calculate transition duration based on number of points
-            const transitionDuration = data.length * 2; // Adjust the constant factor as needed
-
-            // Draw line with delay
-            svg.append("path")
-                .datum(data)
-                .attr("class", "line")
-                .attr("d", line)
-                .attr("stroke-dasharray", function() { return this.getTotalLength() })
-                .attr("stroke-dashoffset", function() { return this.getTotalLength() })
-                .transition()
-                .duration(transitionDuration) // Dynamic duration based on data length
-                .ease(d3.easeLinear)
-                .attr("stroke-dashoffset", 0);
-                };
-
-            updateChart();
-        }
-
-        createVelocityTrace(combinedData)
-    </script>
 </body>
 </html>
