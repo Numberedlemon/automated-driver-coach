@@ -90,21 +90,28 @@ def parse_file(filepath):
 
     return data_df
 
-def parse_dataframe(df):
+def parse_dataframe(filepath):
 
-    print(f"Parsing VBOX-derived dataframe, please wait.\n")
+    print(f"Parsing csv dataframe, please wait.\n")
 
-    data = df
+    data = pd.read_csv(filepath)
 
     lat = data["Latitude"]
     long = data["Longitude"]
     alt = data["Height"]
-    time = data["Time"]
-    velocity = data["Velocity"]
-    latacc = data["LateralAcceleration"]
-    longacc = data["LongitudinalAcceleration"]
+    time = data["time"]
+    velocity = data["Speed"] * 1.60934
+    dist = data["Distance"]
+    latacc = data["AccelLateral"] / 9.81
+    longacc = -data["AccelForward"] / 9.81
+    throttle = data["calThrottlePerc"]/max(data["calThrottlePerc"]) * 100
+    brake = data["calBrakePressBar"]/max(data["calBrakePressBar"]) * 100
+    steer = data["calSteerWheelAngle"]
 
     startTime = time[0]
+    startDist = dist[0]
+
+    dist = dist - startDist
 
     time = time - startTime
 
@@ -115,10 +122,14 @@ def parse_dataframe(df):
         "Height": alt,
         "Velocity": velocity,
         "LateralAcceleration": latacc,
-        "LongitudinalAcceleration": longacc
+        "LongitudinalAcceleration": longacc,
+        "Brake": brake,
+        "Throttle": throttle,
+        "Steer": steer,
+        "Distance": dist
     })
 
-    print("VBOX data parsed. Showing head of data.\nPlease inspect data to ensure form is as expected.\n")
+    print("csv-data parsed. Showing head of data.\nPlease inspect data to ensure form is as expected.\n")
     print(data_df)
 
     return data_df

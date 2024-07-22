@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<head>
+    <title>Throttle and Brake Analysis</title>
+    <meta charset="UTF-8">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://d3js.org/d3-contour.v2.min.js"></script>
+    <link rel="stylesheet" href="../static/css/traces.css">
+
+    <style>
+        #charts {
+            display: flex;
+            flex-direction: column;
+        }
+    </style>
+
+
+</head>
+
+<body>
+    <h2>Throttle and Brake Analysis</h2>
+    <div>Throttle and Brake usage are shown here for the selected lap. All values are normalised to 100%.</div>
+    <div>To reset plot, select All Laps.</div>
+    <div id = "charts">
+        <div id = "chart"></div>
+        <div id = "chart2"></div>
+    </div>
+
+    <div class="dropdown">
+        <form id="lapform">
+        <label for="lap">Select Lap: (Solid)</label>
+        <select id="lap" name="lap">
+          <option value="all" {% if selected_lap == 'all' %}selected{% endif %}>All Laps</option>
+          {% for lap_number in lap_numbers %}
+            <option href="{{url_for('track_map',lap=lap_number)}}"value="{{ lap_number }}" {% if selected_lap == lap_number %}selected{% endif %}>Lap {{ lap_number }}</option>
+          {% endfor %}
+        </select>
+        </form>
+    </div>
+
+    <div class="ref-lap">
+        <label for="lapreference">Select Reference Lap: (Dashed)</label>
+        <select id="lapreference" name="lapreference">
+          <option value="all" {% if selected_lap == 'all' %}selected{% endif %}>All Laps</option>
+          {% for lap_number in lap_numbers %}
+            <option href="{{url_for('track_map',lap=lap_number)}}"value="{{ lap_number }}" {% if selected_lap == lap_number %}selected{% endif %}>Lap {{ lap_number }}</option>
+          {% endfor %}
+        </select>
+    </div>
+    <div> Abscissa: 
+        <input type="radio" name="plotType" id="radioDistance" value="distance" checked>
+        <label for="radioDistance">Distance</label>
+        <input type="radio" name="plotType" id="radioTime" value="time">
+        <label for="radioDistance">Time</label>
+    </div>
+
+    <script>
+
+        const data = {{ data|safe }};
+
+        console.log(data);
+
+        // Function to filter data rows by lap number
+        function filterByLapNumber(data, lapNumber) {
+            const filteredRows = {};
+
+            // Iterate through each key (which represents lap numbers)
+            for (let key in data.LapNumber) {
+            // Check if the lap number matches
+            if (Math.floor(data.LapNumber[key]) === lapNumber) {
+                // Store the entire row for this lap number
+                filteredRows[key] = {};
+
+                // Iterate through each field in the data object
+                for (let field in data) {
+                filteredRows[key][field] = data[field][key];
+                }
+            }
+            }
+            return filteredRows;
+        }
+
+            
+        // Example usage
+        const lapNumber = 1; // Specify the lap number to filter by
+        const filteredData = filterByLapNumber(data, lapNumber);
+
+        function createVisualisation(data, lapnumber, plotType) {
+
+            const filteredData = filterByLapNumber(data, lapnumber);
+                                
+            // Extracting the data into an array
+            const dataArray = Object.values(filteredData).map(d => ({
+                time: d.Time,
+                Throttle: d.Throttle,
+                Brake: d.Brake,
+                distance: d.Distance
+            }));
+
+            console.log(dataArray);
+
+            let time = dataArray.map(d => d.time);
+            
+            if (plotType === "distance") {
+                time = dataArray.map(d => d.distance);
+            }
+            else if (plotType === "time") {
+                time = dataArray.map(d => d.time);
+            }
+
+            
+            const throttle = dataArray.map(d => d.Throttle);
+            const brake = dataArray.map(d => d.Brake)
+
+            const combinedData = [];
+
+            for (let i = 0; i < time.length; i ++) {
+                combinedData.push({ time: time[i], throttle: throttle[i], brake: brake[i]})
+            }
+
+
+            console.log(combinedData);
+
+            d3.select("#charts").select('svg').remove();
+            d3.select("#charts").select("svg").remove();
+
+            const width = 1000;
+            const height = 200;
+            const margin = {top: 20, right: 30, bottom: 40, left: 50};
+
+            const svg = d3.select("#chart").append('svg')
+                          .attr("class", "throttle")
+                          .attr("width", width + margin.left + margin.right + 48)
+                          .attr("height", height + margin.top + margin.bottom)
+                          .append("g")
+                          .attr("transform", `translate(${margin.left},${margin.top})`);
+
+            const svg2 = d3.select("#chart2").append('svg')
+                          .attr("class","brake")
+                          .attr("width", width + margin.left + margin.right + 48)
+                          .attr("height", height + margin.top + margin.bottom)
+                          .append("g")
+                          .attr("transform", `translate(${margin.left},${margin.top})`);
+
+            const xScale = d3.scaleLinear()
+                             .domain(d3.extent(combinedData, d => d.time))
+                             .nice()
+                             .range([0,width]);
+
+            const yScale = d3.scaleLinear()
+                             .domain(d3.extent(combinedData, d => d.throttle))
+                             .nice()
+                             .range([height, 0]);
+
+            const xAxis = d3.axisBottom(xScale);
+
+            const yAxis = d3.axisLeft(yScale);
+
+            svg.append("g")
+               .attr("transform", `translate(0,${height})`)
+               .call(xAxis);
+
+            svg.append("g")
+               .call(yAxis);
+
+            svg2.append("g")
+                .attr("transform", `translate(0, ${height})`)
+                .call(xAxis);
+
+            svg2.append("g")
+                .call(yAxis);
+
+            if (plotType === "time") {
+                // Add X axis label
+                svg.append("text")
+                    .attr("class", "x label")
+                    .attr("text-anchor", "end")
+                    .attr("x", (width - margin.right + 20)/2)
+                    .attr("y", height + margin.bottom - 5)
+                    .text("Time [s]");
+                }
+                else if (plotType === "distance") {
+                    svg.append("text")
+                    .attr("class", "x label")
+                    .attr("text-anchor", "end")
+                    .attr("x", (width - margin.right + 20)/2)
+                    .attr("y", height + margin.bottom - 5)
+                    .text("Distance [m]");
+                }
+
+            // Add Y axis label
+            svg.append("text")
+               .attr("class", "y label")
+               .attr("text-anchor", "end")
+               .attr("y", -margin.left)
+               .attr("x", -margin.top)
+               .attr("dy", ".75em")
+               .attr("transform", "rotate(-90)")
+               .text("Throttle Input [%]");
+
+            if (plotType === "time") {
+               // Add X axis label
+            svg2.append("text")
+                .attr("class", "x label")
+                .attr("text-anchor", "end")
+                .attr("x", (width - margin.right + 20)/2)
+                .attr("y", height + margin.bottom - 5)
+                .text("Time [s]");
+            }
+            else if (plotType === "distance") {
+                svg2.append("text")
+                .attr("class", "x label")
+                .attr("text-anchor", "end")
+                .attr("x", (width - margin.right + 20)/2)
+                .attr("y", height + margin.bottom - 5)
+                .text("Distance [m]");
+            }
+
+            // Add Y axis label
+            svg2.append("text")
+                .attr("class", "y label")
+                .attr("text-anchor", "end")
+                .attr("y", -margin.left)
+                .attr("x", -margin.top)
+                .attr("dy", ".75em")
+                .attr("transform", "rotate(-90)")
+                .text("Brake Input [%]");
+
+            const lineThrottle = d3.line()
+                                   .x(d => xScale(d.time))
+                                   .y(d => yScale(d.throttle)); 
+                                    // Append the line to the SVG
+            svg.append("path")
+               .datum(combinedData)
+               .attr("class", "lineThrottle")
+               .attr("d", lineThrottle);
+
+            const lineBrake = d3.line()
+                                .x(d => xScale(d.time))
+                                .y(d => yScale(d.brake)); 
+
+            svg2.append("path")
+               .datum(combinedData)
+               .attr("class", "lineBrake")
+               .attr("d", lineBrake);
+
+                        // Add legend
+            const legendData = [
+                    { name: "Throttle", color: "steelblue" },
+                    { name: "Brake", color: "orange" }
+                ];
+
+                const legend = svg.selectAll(".legend")
+                    .data(legendData)
+                    .enter().append("g")
+                    .attr("class", "legend")
+                    .attr("transform", (d, i) => `translate(0,${i * 20})`);
+
+                legend.append("rect")
+                    .attr("x", width + 48)
+                    .attr("width", 18)
+                    .attr("height", 18)
+                    .style("fill", d => d.color);
+
+                legend.append("text")
+                    .attr("x", width + 40)
+                    .attr("y", 9)
+                    .attr("dy", ".35em")
+                    .style("text-anchor", "end")
+                    .text(d => d.name);
+                                    
+};
+
+function createReference(data, lapnumber, plotType) {
+
+    const filteredData = filterByLapNumber(data, lapnumber);
+                        
+    // Extracting the data into an array
+    const dataArray = Object.values(filteredData).map(d => ({
+        time: d.Time,
+        Throttle: d.Throttle,
+        Brake: d.Brake,
+        distance: d.Distance
+    }));
+
+    var time = dataArray.map(d => d.time);
+            
+    if (plotType === "distance") {
+        time = dataArray.map(d => d.distance);
+    }
+    else if (plotType === "time") {
+        time = dataArray.map(d => d.time);
+    }
+    
+    const throttle = dataArray.map(d => d.Throttle);
+    const brake = dataArray.map(d => d.Brake)
+
+    const combinedData = [];
+
+    for (let i = 0; i < time.length; i ++) {
+        combinedData.push({ time: time[i], throttle: throttle[i], brake: brake[i]})
+    }
+
+    console.log(combinedData);
+
+    const width = 1000;
+    const height = 200;
+    const margin = {top: 20, right: 30, bottom: 40, left: 50};
+
+    
+    const svg = d3.select("#chart").select('svg')
+    .attr("width", width + margin.left + margin.right + 48)
+    .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
+
+    
+    const svg2 = d3.select("#chart2").select('svg')
+    .attr("width", width + margin.left + margin.right + 48)
+    .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
+
+
+    const xScale = d3.scaleLinear()
+                     .domain(d3.extent(combinedData, d => d.time))
+                     .nice()
+                     .range([0,width]);
+
+    const yScale = d3.scaleLinear()
+                     .domain(d3.extent(combinedData, d => d.throttle))
+                     .nice()
+                     .range([height, 0]);
+
+    const xAxis = d3.axisBottom(xScale);
+
+    const yAxis = d3.axisLeft(yScale);
+
+    const lineThrottle = d3.line()
+                           .x(d => xScale(d.time))
+                           .y(d => yScale(d.throttle)); 
+                            // Append the line to the SVG
+    svg.append("path")
+       .datum(combinedData)
+       .attr("class", "lineThrottleReference")
+       .attr("d", lineThrottle);
+
+    const lineBrake = d3.line()
+                        .x(d => xScale(d.time))
+                        .y(d => yScale(d.brake)); 
+
+    svg2.append("path")
+       .datum(combinedData)
+       .attr("class", "lineBrakeReference")
+       .attr("d", lineBrake);
+
+            
+};
+
+        // Initialize dropdown menu options
+        const lapNumberDropdown = document.getElementById("lap");
+        const lapReferenceDropdown = document.getElementById("lapreference");
+        const abscissaDistance = document.getElementById("radioDistance");
+        const abscissaTime = document.getElementById("radioTime");
+
+
+        // Function to log the checked checkbox value
+        function logCheckedValue() {
+            if (abscissaDistance.checked) {
+                console.log(abscissaDistance.value);
+                return abscissaDistance.value;
+            } else if (abscissaTime.checked) {
+                console.log(abscissaTime.value);
+                return abscissaTime.value;
+            }
+        }
+
+        createVisualisation(data, parseInt(2), "distance");
+        createReference(data, parseInt(1), "distance");
+
+                // Event listener for dropdown change
+        lapNumberDropdown.addEventListener("change", function() {
+            const selectedLapNumber = parseInt(this.value);
+            createVisualisation(data, selectedLapNumber, "distance");
+        });
+
+
+                // Event listener for dropdown change
+        lapReferenceDropdown.addEventListener("change", function() {
+            const selectedLapNumber = parseInt(this.value);
+            createReference(data, selectedLapNumber, "distance");
+        });
+
+        abscissaDistance.addEventListener("change", function() {
+            const plotType = logCheckedValue();
+            createVisualisation(data, 2, plotType);
+            createReference(data, 1, plotType);
+        })
+
+        abscissaTime.addEventListener("change", function() {
+            const plotType = logCheckedValue();    
+            console.log("lap",lapNumberDropdown.value);    
+            createVisualisation(data, 2, plotType);
+            createReference(data, 1, plotType);
+        })
+
+    </script>
+
+</body>

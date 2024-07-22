@@ -8,6 +8,8 @@
     <script src="https://d3js.org/d3-contour.v2.min.js"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <link rel="stylesheet" href="../static/css/track-map.css">
+
+
 </head>
 
 <body>
@@ -32,6 +34,7 @@
 <script>
 // this does work, jinja is just weird.
 const data = {{data|safe}};
+console.log(data);
 
 // Function to filter data rows by lap number
 function filterByLapNumber(data, lapNumber) {
@@ -52,6 +55,7 @@ function filterByLapNumber(data, lapNumber) {
     }
     return filteredRows;
 }
+
         
 // Example usage
 const lapNumber = 3; // Specify the lap number to filter by

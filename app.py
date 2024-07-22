@@ -1,3 +1,6 @@
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
+
 from flask import Flask, session, redirect, request, render_template, jsonify
 from flask_session import Session
 import pandas as pd
@@ -56,13 +59,15 @@ def upload():
 
 
                 # Parse the file into a DataFrame
-                df = parse_file(file)
+                df = parse_dataframe(file)
                 
                 # Add the lap number as a new column
                 df['LapNumber'] = lap_number
                 
                 # Append the DataFrame to the list
                 dfs.append(df)
+
+                print(dfs)
         
         if dfs:
             # Concatenate all DataFrames in the list
@@ -81,6 +86,35 @@ def upload():
 @app.route('/upload')
 def upload_screen():
     return render_template('upload.html')
+
+# o/s u/s page
+@app.route('/os-us')
+def os_us():
+    df = session.get('data')
+
+    lap_numbers = session.get('lap_numbers')
+
+
+    lap = request.form.get("dropdown")
+
+    if lap is not None:
+        df = df[df["LapNumber"] == lap]
+
+    return render_template('os-us.html', data = df, lap_numbers = lap_numbers)
+
+#throttle brake trace diagram
+@app.route('/traces')
+def traces():
+    df = session.get('data')
+
+    lap_numbers = session.get('lap_numbers')
+
+    lap = request.form.get('dropdown')
+
+    if lap is not None:
+        df = df[df["LapNumber"] == lap]
+
+    return render_template('traces.html', data = df, lap_numbers = lap_numbers)
 
 # gg-diagram screen
 @app.route('/gg-diagram')

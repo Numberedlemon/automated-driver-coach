@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<head>
+    <title>Throttle and Brake Analysis</title>
+    <meta charset="UTF-8">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://d3js.org/d3-contour.v2.min.js"></script>
+
+    <style>
+        .lineSteerReference {
+            fill: none;
+            stroke: steelblue;
+            stroke-width: 2px;
+            stroke-dasharray: 5,5;
+        }
+        .lineSteerLap {
+            fill: none;
+            stroke: steelblue;
+            stroke-width: 2px;
+
+        }
+        .lineBrake {
+            fill: none;
+            stroke: orange;
+            stroke-width: 2px;
+        }
+        .axis path,
+        .axis line {
+            fill: none;
+            shape-rendering: crispEdges;
+            stroke: #ccc;
+        }
+    </style>
+
+</head>
+
+<body>
+    <h2>Steering Input Analysis</h2>
+    <div>Analysis of driver steering wheel inputs is shown here. Instances of understeer in blue, instances of oversteer in red.</div>
+    <div id = "charts">
+        <div id = "chart"></div>
+        <div id = "chart2"></div>
+    </div>
+
+    <div class="dropdown">
+        <form id="lapform">
+        <label for="lap">Select Lap: (Solid)</label>
+        <select id="lap" name="lap">
+          <option value="all" {% if selected_lap == 'all' %}selected{% endif %}>All Laps</option>
+          {% for lap_number in lap_numbers %}
+            <option href="{{url_for('track_map',lap=lap_number)}}"value="{{ lap_number }}" {% if selected_lap == lap_number %}selected{% endif %}>Lap {{ lap_number }}</option>
+          {% endfor %}
+        </select>
+        </form>
+    </div>
+
+    <div class="ref-lap">
+        <label for="lapreference">Select Reference Lap: (Dashed)</label>
+        <select id="lapreference" name="lapreference">
+          <option value="all" {% if selected_lap == 'all' %}selected{% endif %}>All Laps</option>
+          {% for lap_number in lap_numbers %}
+            <option href="{{url_for('track_map',lap=lap_number)}}"value="{{ lap_number }}" {% if selected_lap == lap_number %}selected{% endif %}>Lap {{ lap_number }}</option>
+          {% endfor %}
+        </select>
+    </div>
+    <div> Abscissa: 
+        <input type="radio" name="plotType" id="radioDistance" value="distance" checked>
+        <label for="radioDistance">Distance</label>
+        <input type="radio" name="plotType" id="radioTime" value="time">
+        <label for="radioDistance">Time</label>
+    </div>
+
+    <script>
+
+        const data = {{ data|safe }};
+
+        console.log(data.Steer);
+
+        
+        // Function to filter data rows by lap number
+        function filterByLapNumber(data, lapNumber) {
+            const filteredRows = {};
+
+            // Iterate through each key (which represents lap numbers)
+            for (let key in data.LapNumber) {
+            // Check if the lap number matches
+            if (Math.floor(data.LapNumber[key]) === lapNumber) {
+                // Store the entire row for this lap number
+                filteredRows[key] = {};
+
+                // Iterate through each field in the data object
+                for (let field in data) {
+                filteredRows[key][field] = data[field][key];
+                }
+            }
+            }
+            return filteredRows;
+        }
+
+        function createVisualisation(data, lapnumber, plotType) {
+
+            const filteredData = filterByLapNumber(data, lapnumber);
+                                
+            // Extracting the data into an array
+            const dataArray = Object.values(filteredData).map(d => ({
+                time: d.Time,
+                Steer: d.Steer,
+                distance: d.Distance
+            }));
+
+            console.log(dataArray);
+
+
+            let time = dataArray.map(d => d.time);
+            
+            if (plotType === "distance") {
+                time = dataArray.map(d => d.distance);
+            }
+            else if (plotType === "time") {
+                time = dataArray.map(d => d.time);
+            }
+
+            const steer = dataArray.map(d => d.Steer);
+
+            const combinedData = [];
+
+            for (let i = 0; i < time.length; i ++) {
+                combinedData.push({time: time[i], steer: steer[i]});
+            };
+
+            console.log("Visualiser:",combinedData);
+
+            d3.select("#chart").select('svg').remove();
+
+            const width = 1000;
+            const height = 200;
+            const margin = {top: 20, right: 30, bottom: 40, left: 50};
+
+            const svg = d3.select("#chart").append('svg')
+                          .attr("width", width + margin.left + margin.right + 48)
+                          .attr("height", height + margin.top + margin.bottom)
+                          .append("g")
+                          .attr("transform", `translate(${margin.left},${margin.top})`);
+
+            const xScale = d3.scaleLinear()
+                             .domain(d3.extent(combinedData, d => d.time))
+                             .nice()
+                             .range([0,width]);
+
+            const yScale = d3.scaleLinear()
+                             .domain(d3.extent(combinedData, d => d.steer))
+                             .nice()
+                             .range([height, 0]);
+
+            const xAxis = d3.axisBottom(xScale);
+
+            const yAxis = d3.axisLeft(yScale);
+
+            svg.append("g")
+               .attr("transform", `translate(0,${height})`)
+               .call(xAxis);
+
+            svg.append("g")
+               .call(yAxis);
+
+               const lineSteer = d3.line()
+               .x(d => xScale(d.time))
+               .y(d => yScale(d.steer));
+                                    // Append the line to the SVG
+
+            svg.append("path")
+               .datum(combinedData)
+               .attr("class", "lineSteerLap")
+               .attr("d", lineSteer);
+
+               if (plotType === "time") {
+                // Add X axis label
+                svg.append("text")
+                    .attr("class", "x label")
+                    .attr("text-anchor", "end")
+                    .attr("x", (width - margin.right + 20)/2)
+                    .attr("y", height + margin.bottom - 5)
+                    .text("Time [s]");
+                }
+                else if (plotType === "distance") {
+                    svg.append("text")
+                    .attr("class", "x label")
+                    .attr("text-anchor", "end")
+                    .attr("x", (width - margin.right + 20)/2)
+                    .attr("y", height + margin.bottom - 5)
+                    .text("Distance [m]");
+                }
+
+            svg.append("text")
+                .attr("class", "y label")
+                .attr("text-anchor", "end")
+                .attr("y", -margin.left)
+                .attr("x", -margin.top / 2)
+                .attr("dy", ".75em")
+                .attr("transform", "rotate(-90)")
+                .text("Steering Wheel Angle [ \u00B0]");
+
+        };
+
+        function createReference(data, lapnumber, plotType) {
+
+            const filteredData = filterByLapNumber(data, lapnumber);
+
+            const dataArray = Object.values(filteredData).map(d => ({
+                time: d.Time,
+                Steer: d.Steer,
+                distance: d.Distance
+            }));
+
+            var time = dataArray.map(d => d.time);
+            
+            if (plotType === "distance") {
+                time = dataArray.map(d => d.distance);
+            }
+            else if (plotType === "time") {
+                time = dataArray.map(d => d.time);
+            }
+
+            const steer = dataArray.map(d => d.Steer);
+
+            const combinedData = [];
+
+            for (let i = 0; i < time.length; i ++) {
+                combinedData.push({time: time[i], steer: steer[i]});
+            };
+
+            console.log("selected: ",combinedData);
+
+            const width = 1000;
+            const height = 200;
+            const margin = {top: 20, right: 30, bottom: 40, left: 50};
+        
+            
+            const svg = d3.select("#chart").select('svg')
+            .attr("width", width + margin.left + margin.right + 48)
+            .attr("height", height + margin.top + margin.bottom)
+            .append("g")
+            .attr("transform", `translate(${margin.left},${margin.top})`);
+
+            const xScale = d3.scaleLinear()
+            .domain(d3.extent(combinedData, d => d.time))
+            .nice()
+            .range([0,width]);
+
+            const yScale = d3.scaleLinear()
+                        .domain(d3.extent(combinedData, d => d.steer))
+                        .nice()
+                        .range([height, 0]);
+
+            const xAxis = d3.axisBottom(xScale);
+
+            const yAxis = d3.axisLeft(yScale);
+            
+            const lineSteer = d3.line()
+                                .x(d => xScale(d.time))
+                                .y(d => yScale(d.steer));
+
+            svg.append("path")
+               .datum(combinedData)
+               .attr("class", "lineSteerReference")
+               .attr("d", lineSteer);
+
+        };
+
+        createVisualisation(data, 2, "distance");
+        createReference(data, 1, "distance");
+
+        // Initialize dropdown menu options
+        const lapNumberDropdown = document.getElementById("lap");
+        const lapReferenceDropdown = document.getElementById("lapreference");
+        const abscissaDistance = document.getElementById("radioDistance");
+        const abscissaTime = document.getElementById("radioTime");
+
+
+        // Function to log the checked checkbox value
+        function logCheckedValue() {
+            if (abscissaDistance.checked) {
+                console.log(abscissaDistance.value);
+                return abscissaDistance.value;
+            } else if (abscissaTime.checked) {
+                console.log(abscissaTime.value);
+                return abscissaTime.value;
+            }
+        }
+
+        createVisualisation(data, parseInt(2), "distance");
+        createReference(data, parseInt(1), "distance");
+
+                // Event listener for dropdown change
+        lapNumberDropdown.addEventListener("change", function() {
+            const selectedLapNumber = parseInt(this.value);
+            createVisualisation(data, selectedLapNumber, "distance");
+        });
+
+
+                // Event listener for dropdown change
+        lapReferenceDropdown.addEventListener("change", function() {
+            const selectedLapNumber = parseInt(this.value);
+            createReference(data, selectedLapNumber, "distance");
+        });
+
+        abscissaDistance.addEventListener("change", function() {
+            const plotType = logCheckedValue();
+            createVisualisation(data, 2, plotType);
+            createReference(data, 1, plotType);
+        })
+
+        abscissaTime.addEventListener("change", function() {
+            const plotType = logCheckedValue();    
+            console.log("lap",lapNumberDropdown.value);    
+            createVisualisation(data, 2, plotType);
+            createReference(data, 1, plotType);
+        })
+    </script>
+
+</body>

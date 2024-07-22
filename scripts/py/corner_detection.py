@@ -56,7 +56,7 @@ def detect_corners(df):
             if i == len(df) - 1 or df.loc[i + 1, 'is_corner'] == 1:
                 straight_count += 1
 
-    #print(df)
+    print(df)
 
 if __name__ == "__main__":
 
