@@ -7,6 +7,7 @@ import pandas as pd
 from scripts.py.metrics import calculate_metrics
 from scripts.py.corner_detection import detect_corners
 from scripts.py.vbox_parser import parse_dataframe, parse_file
+from scripts.py.brake_analysis import brake_length
 import re
 import json
 from io import StringIO
@@ -86,6 +87,16 @@ def upload():
 @app.route('/upload')
 def upload_screen():
     return render_template('upload.html')
+
+@app.route('/brake_index')
+def brakes():
+    df = pd.read_json(session.get('data'))
+
+    lap_numbers = session.get('lap_numbers')
+
+    df = brake_length(df)
+
+    return render_template('brakes.html', data = df.to_json(), lap_numbers = lap_numbers)
 
 # o/s u/s page
 @app.route('/os-us')
