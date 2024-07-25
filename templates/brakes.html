@@ -108,11 +108,17 @@
         .enter()
         .append("rect")
         .attr("class", "bar")
-        .attr("x", d => xScale(d.Braking_ID) + xScale.bandwidth() / d3.max(dataArray, d => d.Braking_ID))
-        .attr("y", d => yScale(d.brake_index))
+        .attr("x", function(d) { return xScale(d.Braking_ID) + xScale.bandwidth()/4})
         .attr("width", xScale.bandwidth()/2)
-        .attr("height", d => height - yScale(d.brake_index));
+        .attr("height", function(d) { return height - yScale(0); }) // always equal to 0
+        .attr("y", function(d) { return yScale(0); });
 
+        svg.selectAll("rect")
+        .transition()
+        .duration(800)
+        .attr("y", function(d) { return yScale(d.brake_index); })
+        .attr("height", function(d) { return height - yScale(d.brake_index); })
+        .delay(function(d,i){console.log(i) ; return(i*100)});
                     // Add Y axis label
         svg.append("text")
         .attr("class", "y label")
@@ -126,7 +132,7 @@
         svg.append("text")
         .attr("class", "x label")
         .attr("text-anchor", "end")
-        .attr("x", (width - margin.right + 20)/2)
+        .attr("x", (width - margin.right)/2)
         .attr("y", height + margin.bottom - 5)
         .text("Braking Zone");
 
