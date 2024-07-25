@@ -19,7 +19,7 @@ def brake_length(df):
     braking_periods = df[df['Brake'] > 0]
 
     # Group by braking ID to calculate the duration of each instance
-    braking_summary = braking_periods.groupby('Braking_ID').agg(
+    braking_summary = braking_periods.groupby(['Braking_ID', "LapNumber"]).agg(
         start_time=('Time', 'first'),
         end_time=('Time', 'last'),
         duration=('Time', lambda x: x.max() - x.min()),
