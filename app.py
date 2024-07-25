@@ -88,6 +88,10 @@ def upload():
 def upload_screen():
     return render_template('upload.html')
 
+@app.route("/mini-sectors")
+def mini_sectors():
+    return render_template("mini_sectors.html")
+
 @app.route('/brake_index')
 def brakes():
     df = pd.read_json(session.get('data'))
