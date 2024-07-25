@@ -30,31 +30,6 @@
             border-radius: 8px;
             pointer-events: none;
         }
-
-        /* CSS styles */
-        .brush .handle {
-            fill: #ffffff;
-            stroke: #000000;
-            stroke-width: 0.1px;
-        }
-        
-        .brush .overlay {
-            fill: none;
-            pointer-events: all;
-        }
-        
-        .dot {
-            fill: steelblue;
-            opacity: 1; /* Initially set opacity to 1 */
-        }
-        
-        .dot.selected {
-            opacity: 1; /* Adjust opacity for selected dots */
-        }
-        
-        .dot.not-selected {
-            opacity: 0.1; /* Set opacity low for dots not selected */
-        }
     </style>
 </head>
 
@@ -62,6 +37,7 @@
     <h2>G-G Diagram</h2>
     <div>This page displays a representation of the amount of lateral and longitudinal capability used during the lap.</div>
     <div>Typically a more full (circular) diagram is desirable.</div>
+    <button id="resetButton">Reset Highlights</button>
 
     <div id = "charts">
         <div id = "chart"></div>
@@ -70,6 +46,8 @@
     <script>
         // this does work, jinja is just weird.
         const data = {{data|safe}};
+
+        console.log(data);
 
         // set margins
         const width = 500;
@@ -86,12 +64,15 @@
         // get domain sizes by hand because json is weird
         const xval = Object.values(data.LateralAcceleration)
         const yval = Object.values(data.LongitudinalAcceleration)
+        const zval = Object.values(data.LapNumber);
+
+        console.log(zval)
 
         const combinedData = [];
 
         // put x and y values into array again...
         for (let i = 0; i < xval.length; i++) {
-            combinedData.push({ x: xval[i], y: yval[i] });
+            combinedData.push({ x: xval[i], y: yval[i], z: zval[i] });
         }
         
         // make axes
@@ -116,6 +97,12 @@
         .attr("class", "tooltip")
         .style("opacity", 0);
 
+        const colors = d3.schemeTableau10;
+
+        const colorScale = d3.scaleOrdinal()
+            .domain(d3.extent(combinedData, d => d.z))
+            .range(colors);
+
         svg.append("g")
             .attr("transform", `translate(0,${height})`)
             .call(xAxis);
@@ -124,15 +111,15 @@
             .call(yAxis);
 
         // Create and append scatter plot points
-        svg.selectAll(".dot")
+        const circles = svg.selectAll(".dot")
             .data(combinedData)
             .enter().append("circle")
             .attr("class", "dot")
             .attr("cx", d => xScale(d.x))
             .attr("cy", d => yScale(d.y))
             .attr("r", 3)
-            .attr("fill", "steelblue" )
-            .attr("opacity", 0.8)
+            .attr("fill", d => colorScale(d.z))
+            .attr("opacity", 0.5)
             .on("mouseover", (event, d) => {
                 tooltip.transition()
                     .duration(200)
@@ -146,6 +133,16 @@
                     .duration(500)
                     .style("opacity", 0);
             });
+
+        circles.on("click", function(event, d) {
+            event.stopPropagation();
+            const clickedColor = d3.select(this).attr("fill");
+            highlightPoints(clickedColor);
+        });
+
+        d3.select("#resetButton").on("click", function() {
+            resetHighlight();
+        });
 
               // Add X axis label
         svg.append("text")
@@ -164,6 +161,21 @@
             .attr("dy", ".75em")
             .attr("transform", "rotate(-90)")
             .text("Longitudinal Acceleration (G)");
+        
+        function highlightPoints(color) {
+            circles.transition()
+                .duration(500)
+                .attr("opacity", function(d) {
+                    return d3.select(this).attr("fill") === color ? 1 : 0.1;
+                });
+        }
+
+        // Function to reset all points to normal opacity
+        function resetHighlight() {
+            circles.transition()
+                .duration(500)
+                .attr("opacity", 0.5);
+        }
 
     </script>
 </body>
