@@ -11,4 +11,127 @@
         <div id = "chart"></div>
         <div id = "chart2"></div>
     </div>
+
+    
+    {% if result is not none %}
+      <h3>Comparing Lap: {{ lapSelect }} with Reference Lap: {{ lapReference }}</h3>
+    {% endif %}
+
+    <h3>Select Laps to Compare</h1>
+    <form action="/mini-sectors" method="post">
+      <label for="lapSelect">Lap 1:</label>
+      <select name="lapSelect" id="lapSelect">
+        {% for lap in lap_numbers %}
+          <option value="{{ lap }}">{{ lap }}</option>
+        {% endfor %}
+      </select>
+      
+      <label for="lapReference">Lap 2:</label>
+      <select name="lapReference" id="lapReference">
+        {% for lap in lap_numbers %}
+          <option value="{{ lap }}">{{ lap }}</option>
+        {% endfor %}
+      </select>
+      
+      <input type="submit" value="Compare">
+    </form>
+
+
+    <script>
+        const data = {{ data | safe }};
+
+        console.log(data);
+        
+        const dataArray = Object.keys(data.sector).map(key => ({
+            sector: data.sector[key],
+            delta: data.time_difference[key]
+        }));
+        
+        console.log(dataArray);
+        
+        // Set up dimensions and margins
+        const margin = { top: 20, right: 30, bottom: 40, left: 50 },
+            width = 800 - margin.left - margin.right,
+            height = 500 - margin.top - margin.bottom;
+        
+        // Create SVG container
+        const svg = d3.select("#chart").append("svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+            .append("g")
+            .attr("transform", `translate(${margin.left},${margin.top})`);
+        
+            const xScale = d3.scaleBand()
+            .domain(dataArray.map(d => d.sector))
+            .range([0, width]);
+        
+        const yExtent = d3.extent(dataArray, d => d.delta);
+        const yDomain = [Math.min(0, yExtent[0]), Math.max(0, yExtent[1])];
+        
+        const yScale = d3.scaleLinear()
+            .domain(yDomain)
+            .nice()
+            .range([height, 0]);
+        
+        const xAxis = d3.axisBottom(xScale);
+        
+        const yAxis = d3.axisLeft(yScale);
+        
+        // Position the x-axis at the zero value on the y-scale
+        const xAxisPosition = yScale(0);
+        
+        svg.append("g")
+            .attr("class", "x-axis")
+            .attr("transform", `translate(0,${xAxisPosition})`)
+            .call(xAxis);
+        
+        // Append the y-axis
+        svg.append("g")
+            .attr("class", "y-axis")
+            .call(yAxis);
+        
+        // Add zero line (optional if you want a thicker line for zero)
+        //svg.append("line")
+        //    .attr("x1", 0)
+        //    .attr("y1", xAxisPosition)
+        //    .attr("x2", width)
+        //    .attr("y2", xAxisPosition)
+        //    .attr("stroke", "black");
+        
+        // Create circles for the scatter plot
+        svg.selectAll(".dot")
+            .data(dataArray)
+            .enter()
+            .append("circle")
+            .attr("class", "dot")
+            .attr("cx", d => xScale(d.sector) + xScale.bandwidth() / 2) // Center the circle within the band
+            .attr("cy", d => yScale(d.delta))
+            .attr("r", 5) // Radius of the circles
+            .attr("fill", d => d.delta >= 0 ? "steelblue" : "red");
+        
+        svg.selectAll("circle")
+            .transition()
+            .duration(800)
+            .delay((d, i) => i * 100)
+            .attr("cy", d => yScale(d.delta));
+
+              // Add X axis label
+        // Add x-axis label
+        svg.append("text")
+        .attr("class", "x-axis-label")
+        .attr("text-anchor", "end")
+        .attr("x", width)
+        .attr("y", xAxisPosition + 40) // Adjust this value to position the label correctly
+        .text("Sector");
+  
+          // Add Y axis label
+        svg.append("text")
+              .attr("class", "y label")
+              .attr("text-anchor", "end")
+              .attr("y", -margin.left)
+              .attr("x", -height / 2.75)
+              .attr("dy", ".75em")
+              .attr("transform", "rotate(-90)")
+              .text("Time Delta [s]");
+    </script>
 </body>

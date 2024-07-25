@@ -1,23 +1,41 @@
 <!doctype html>
 <html>
-<body>
-    <title>Thesis Project Home Screen</title>
-    <h2>Data Uploaded!</h2>
-    <div>Check out your data visualisations using the pages below while the object detection algorithm runs it's course.</div>
-    <div>Click on Corner Detection to see the progress of the tool, or view instances of traffic.</div>
-    <ul>
-       <li><a href = "{{ url_for('show_gg') }}">Acceleration Diagram</a></li>
+    <body>
+        <title>Thesis Project Home Screen</title>
+        <h2>Data Uploaded!</h2>
+        <div>Check out your data visualisations using the pages below while the
+            object detection algorithm runs it's course.</div>
+        <div>Click on Object Detection to see the progress of the tool, or view
+            instances of traffic.</div>
+        <ul>
+            <li>Driver Performance</li>
+            <ul>
+                <li><a href="{{ url_for('show_gg') }}">Acceleration
+                        Diagram</a></li>
 
-       <li><a href = "{{ url_for('track_map') }}">Track Map</a></li>
+                <li><a href="{{ url_for('track_map') }}">Track Map</a></li>
 
-       <li><a href = "{{ url_for('metrics') }}">Straight and Corner Breakdown</a></li>
-        <li><a href = "{{ url_for('traces') }}">Throttle and Brake Analysis</a></li>
+                <li><a href="{{ url_for('metrics') }}">Straight and Corner
+                        Breakdown</a></li>
+                <li><a href="{{ url_for('traces') }}">Throttle and Brake
+                        Analysis</a></li>
 
-        <li><a href = "{{ url_for ('os_us') }}">Over- and Under-Steer Analysis</a></li>
-        <li><a href = "{{ url_for ('brakes') }}">Brake Index Analysis</a></li>
-        <li><a href = "{{ url_for ('mini_sectors') }}">Mini Sector Analysis</a></li>
-    </ul>
+                <li><a href="{{ url_for ('os_us') }}">Over- and Under-Steer
+                        Analysis</a></li>
+                <li><a href="{{ url_for ('brakes') }}">Brake Index
+                        Analysis</a></li>
+                <li><a href="{{ url_for ('mini_sectors') }}">Mini Sector
+                        Analysis</a></li>
 
+            </ul>
+            <li>
+                Object Detection
+            </li>
+            <ul>
+                <li><a href="{{ url_for ('object_detection') }}">Object
+                        Detection</a></li>
+            </ul>
+        </ul>
 
-</body>
+    </body>
 </html>

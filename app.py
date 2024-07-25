@@ -8,6 +8,7 @@ from scripts.py.metrics import calculate_metrics
 from scripts.py.corner_detection import detect_corners
 from scripts.py.vbox_parser import parse_dataframe, parse_file
 from scripts.py.brake_analysis import brake_length
+from scripts.py.mini_sectors import *
 import re
 import json
 from io import StringIO
@@ -88,9 +89,34 @@ def upload():
 def upload_screen():
     return render_template('upload.html')
 
-@app.route("/mini-sectors")
+@app.route('/object-detection')
+def object_detection():
+    return render_template('detection.html')
+
+@app.route("/mini-sectors", methods = ["POST", "GET"])
 def mini_sectors():
-    return render_template("mini_sectors.html")
+
+    lap_numbers = session.get("lap_numbers")
+
+    lapSelect = request.args.get('lapSelect', 3, type=int)
+    lapReference = request.args.get('lapReference', 2, type=int)
+
+    if request.method == 'POST':
+        lapSelect = request.form.get('lapSelect', type=int)
+        lapReference = request.form.get('lapReference', type=int)
+        return redirect(f'/mini-sectors?lapSelect={lapSelect}&lapReference={lapReference}')
+
+    df = pd.read_json(session.get("data"))
+
+    df_Selected = df[df["LapNumber"] == lapSelect]
+    df_Reference = df[df["LapNumber"] == lapReference]
+
+    df1 = discretise_lap(df_Selected, num_bins = 10, brake_threshold = 10)
+    df2 = discretise_lap(df_Reference, num_bins = 10, brake_threshold = 10)
+
+    results = get_deltas(df2, df1)
+
+    return render_template("mini_sectors.html", lap_numbers = lap_numbers, lapSelect = lapSelect, lapReference = lapReference, data = results.to_json())
 
 @app.route('/brake_index')
 def brakes():
