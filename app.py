@@ -1,18 +1,20 @@
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
+
 from flask import Flask, session, redirect, request, render_template, jsonify
 from flask_session import Session
 import pandas as pd
+from pandas.errors import SettingWithCopyWarning
+warnings.simplefilter(action='ignore', category=(SettingWithCopyWarning))
 from scripts.py.metrics import calculate_metrics
-from scripts.py.corner_detection import detect_corners
+from scripts.py.corner_detection import detect_corners, detect_corners_by_accel
 from scripts.py.vbox_parser import parse_dataframe, parse_file
 from scripts.py.brake_analysis import brake_length
 from scripts.py.mini_sectors import *
 import re
 import json
 from io import StringIO
-
 
 """
 To do: 
@@ -24,12 +26,20 @@ To do:
 
 : 9/7/2024 :
 
-- Refactor code to accept every lap in the stint
-- Add dropdown functionality to select lap to view to velocity breakdown and gg-plot.
-- Add ability to compare two laps.
+- Refactor code to accept every lap in the stint. DONE 25/7/2024
+- Add dropdown functionality to select lap to view to velocity breakdown and gg-plot. 
+- Add ability to compare two laps. DONE 26/7/2024
 - Research breaking of lap into sectors and stitching together of best lap.
+    - Sector splits DONE 25/7/2024
 
-(LAST UPDATE 11:28 AM 9/7/2024)
+: 26/7/2024 :
+
+- Under- and Over-steer algorithm implementation.
+- More braking metrics (time to max brake?)
+- Implement video detection in a way that makes sense.
+- Cleaning of code and making sure visuals work in a way that looks right.
+
+(LAST UPDATE 11:57 AM 26/7/2024)
 """
 
 app = Flask(__name__, "/static")
@@ -111,8 +121,8 @@ def mini_sectors():
     df_Selected = df[df["LapNumber"] == lapSelect]
     df_Reference = df[df["LapNumber"] == lapReference]
 
-    df1 = discretise_lap(df_Selected, num_bins = 10, brake_threshold = 10)
-    df2 = discretise_lap(df_Reference, num_bins = 10, brake_threshold = 10)
+    df1 = discretise_lap(df_Selected, num_bins = 3, brake_threshold = 10)
+    df2 = discretise_lap(df_Reference, num_bins = 3, brake_threshold = 10)
 
     results = get_deltas(df2, df1)
 
@@ -173,7 +183,6 @@ def track_map():
 
     df = pd.read_json(df)
 
-# Read the StringIO object into a DataFrame
     lap = request.form.get('dropdown')
 
     lap_numbers = session.get('lap_numbers')
@@ -189,12 +198,11 @@ def track_map():
 def metrics():
 
     lap_numbers = session.get('lap_numbers')
-    lap = 1
+    lap = 2
     if 'data' not in session:
         return redirect('/upload')
     
     df = pd.read_json(session['data'])
-    print(df)
 
     #print(f"Printing DF: {df}")
 
@@ -229,7 +237,7 @@ def metrics(lap_number):
 
 def run_data_analysis(df, lap):
 
-    detect_corners(df)
+    df = detect_corners_by_accel(df)
 
     metrics = calculate_metrics(df, lap)
 

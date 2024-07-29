@@ -1,12 +1,12 @@
 <!doctype html>
 <html>
 
-<head>
-    <title>G-G Diagram</title>
-    <meta charset="UTF-8">
-    <script src="https://d3js.org/d3.v7.min.js"></script>
-    <script src="https://d3js.org/d3-contour.v2.min.js"></script>
-    <style>
+    <head>
+        <title>G-G Diagram</title>
+        <meta charset="UTF-8">
+        <script src="https://d3js.org/d3.v7.min.js"></script>
+        <script src="https://d3js.org/d3-contour.v2.min.js"></script>
+        <style>
         #charts {
             display: flex;
             justify-content: left;
@@ -31,19 +31,20 @@
             pointer-events: none;
         }
     </style>
-</head>
+    </head>
 
-<body>
-    <h2>G-G Diagram</h2>
-    <div>This page displays a representation of the amount of lateral and longitudinal capability used during the lap.</div>
-    <div>Typically a more full (circular) diagram is desirable.</div>
-    <button id="resetButton">Reset Highlights</button>
+    <body>
+        <h2>G-G Diagram</h2>
+        <div>This page displays a representation of the amount of lateral and
+            longitudinal capability used during the lap.</div>
+        <div>Typically a more full (circular) diagram is desirable.</div>
+        <button id="resetButton">Reset Highlights</button>
 
-    <div id = "charts">
-        <div id = "chart"></div>
-    </div>
+        <div id="charts">
+            <div id="chart"></div>
+        </div>
 
-    <script>
+        <script>
         // this does work, jinja is just weird.
         const data = {{data|safe}};
 
@@ -178,5 +179,5 @@
         }
 
     </script>
-</body>
+    </body>
 </html>

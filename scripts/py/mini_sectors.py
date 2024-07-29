@@ -37,7 +37,8 @@ def discretize_and_label(df, adjusted_bin_edges):
 
 def calculate_max_time(df):
 
-    max_time_in_bins = df.groupby('sector')['Time'].max().reset_index()
+    max_time_in_bins = df.groupby('sector')['Time'].agg(["max", "min"]).reset_index()
+    max_time_in_bins["Time"] = max_time_in_bins["max"] - max_time_in_bins["min"]
     max_time_in_bins['sector'] = max_time_in_bins['sector'] + 1  # Bin labels start from 1
     return max_time_in_bins
 
@@ -60,8 +61,6 @@ def discretise_lap(df, num_bins, brake_threshold):
     
     # Calculate the maximum time for each bin
     max_time_in_bins = calculate_max_time(df)
-
-    print(max_time_in_bins)
     
     # Plot the results
     #plot_max_time_bins(df)

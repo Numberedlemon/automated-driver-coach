@@ -21,26 +21,30 @@
         }
     </style>
 
-
 </head>
 
 <body>
     <h2>Brake Index Analysis</h2>
-    <div>This page displays a metric relating the maximum pressure achieved in a corner to the length of the brake application. A higher value typically corresponds to higher performance for a given corner.</div>
+    <div>This page displays a metric relating the maximum pressure achieved in a
+        corner to the length of the brake application. A higher value typically
+        corresponds to higher performance for a given corner.</div>
     <div>To reset plot, select All Laps.</div>
-    <div id = "charts">
-        <div id = "chart"></div>
+    <div id="charts">
+        <div id="chart"></div>
     </div>
 
     <div class="dropdown">
         <form id="lapform">
-        <label for="lap">Select Lap: (Solid)</label>
-        <select id="lap" name="lap">
-          <option value="all" {% if selected_lap == 'all' %}selected{% endif %}>All Laps</option>
-          {% for lap_number in lap_numbers %}
-            <option href="{{url_for('track_map',lap=lap_number)}}"value="{{ lap_number }}" {% if selected_lap == lap_number %}selected{% endif %}>Lap {{ lap_number }}</option>
-          {% endfor %}
-        </select>
+            <label for="lap">Select Lap: (Solid)</label>
+            <select id="lap" name="lap">
+                <option value="all" {% if selected_lap == 'all' %}selected{%
+                    endif %}>All Laps</option>
+                {% for lap_number in lap_numbers %}
+                <option href="{{url_for('track_map',lap=lap_number)}}"
+                    value="{{ lap_number }}" {% if selected_lap == lap_number
+                    %}selected{% endif %}>Lap {{ lap_number }}</option>
+                {% endfor %}
+            </select>
         </form>
     </div>
 
@@ -139,5 +143,5 @@
         .text("Braking Zone");
 
     </script>
-    
+
 </body>

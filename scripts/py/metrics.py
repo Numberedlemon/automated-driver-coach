@@ -1,6 +1,6 @@
 import pandas as pd
 from scripts.py.vbox_parser import parse_file, parse_dataframe
-from scripts.py.corner_detection import detect_corners
+from scripts.py.corner_detection import *
 
 
 def calculate_metrics(df,lap):
@@ -15,9 +15,10 @@ def calculate_velocity_metrics(df, lap):
     #print(timeit.timeit(f'df[df["LapNumber"] == lap]', number = 100, globals={'df': df, 'lap': lap}))
 
     df = df[df["LapNumber"] == lap]
+    print(df)
 
     # aggregation by group, calculation of group mean, min, and max.
-    metrics = df.groupby('section').agg({'Velocity': ["min", "mean", "max"]}).reset_index()
+    metrics = df.groupby('segment_label').agg({'Velocity': ["min", "mean", "max"]}).reset_index()
 
     # make DataFrame.
     df_metrics = pd.DataFrame(metrics)
@@ -51,10 +52,12 @@ def generate_acceleration_report(df):
 
 if __name__ == "__main__":
 
-    data = parse_file("./uploads/data.csv")
+    data = parse_dataframe("test, Lap 3.csv")
 
-    detect_corners(data)
+    detect_corners_by_accel(data)
 
-    calculate_velocity_metrics(data)
+    m = calculate_velocity_metrics(data, 1)
     
-    generate_acceleration_report(data)
+    #generate_acceleration_report(data)
+
+    print(m)

@@ -29,7 +29,7 @@ def brake_length(df):
     # Remove instances with a duration of 1 (single entry)
     braking_summary = braking_summary[braking_summary['duration'] > 1]
 
-    # Ignore single entry instances of brake application
+
     braking_summary['brake_index'] = braking_summary['peak_press'] / braking_summary['duration']
 
     # Reset the Braking_ID so that it starts from 1

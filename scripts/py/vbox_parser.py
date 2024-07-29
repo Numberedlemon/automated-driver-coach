@@ -100,7 +100,7 @@ def parse_dataframe(filepath):
     long = data["Longitude"]
     alt = data["Height"]
     time = data["time"]
-    velocity = data["Speed"] * 1.60934
+    velocity = data["Speed"] #* 1.60934
     dist = data["Distance"]
     latacc = data["AccelLateral"] / 9.81
     longacc = -data["AccelForward"] / 9.81

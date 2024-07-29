@@ -76,7 +76,8 @@
                 success: function(response) {
                     const data = JSON.parse(response);
                     console.log(data);
-                    if (data && data["('section', '')"] && data["('Velocity', 'min')"]) {
+                    if (data && data["('segment_label', '')"] && data["('Velocity', 'min')"]) {
+                        console.log(data);
                         createChart(data);
                     } else {
                         console.error('Invalid data format or missing properties');
@@ -94,7 +95,7 @@
             d3.select("#chart").select("svg").remove();
 
             // Parse JSON data
-            const sections = Object.values(data["('section', '')"]);
+            const sections = Object.values(data["('segment_label', '')"]);
             const minVelocities = Object.values(data["('Velocity', 'min')"]);
             const meanVelocities = Object.values(data["('Velocity', 'mean')"]);
             const maxVelocities = Object.values(data["('Velocity', 'max')"]);
@@ -151,7 +152,7 @@
 
             // Define the updateChart function with aggregation and plotType parameters
             const updateChart = (data, aggregation, plotType) => {
-                const sections = Object.entries(data["('section', '')"])
+                const sections = Object.entries(data["('segment_label', '')"])
                     .map(([index, name]) => ({ index: +index, name }));
 
                 // Filter sections based on plotType (corners or straights)
