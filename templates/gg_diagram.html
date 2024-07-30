@@ -111,6 +111,27 @@
         svg.append("g")
             .call(yAxis);
 
+        
+        // Add dashed line for x = 0
+        svg.append("line")
+        .attr("x1", xScale(0))  // x position for start of the line
+        .attr("x2", xScale(0))  // x position for end of the line
+        .attr("y1", yScale(yScale.domain()[0]))  // y position for start of the line (bottom of the scale)
+        .attr("y2", yScale(yScale.domain()[1]))  // y position for end of the line (top of the scale)
+        .attr("stroke", "black")  // line color
+        .attr("stroke-width", 1)  // line width
+        .attr("stroke-dasharray", "5,5");  // dash pattern (5 pixels dash, 5 pixels gap)
+
+        // Add dashed line for y = 0
+        svg.append("line")
+        .attr("x1", xScale(xScale.domain()[0]))  // x position for start of the line (left of the scale)
+        .attr("x2", xScale(xScale.domain()[1]))  // x position for end of the line (right of the scale)
+        .attr("y1", yScale(0))  // y position for start of the line
+        .attr("y2", yScale(0))  // y position for end of the line
+        .attr("stroke", "black")  // line color
+        .attr("stroke-width", 1)  // line width
+        .attr("stroke-dasharray", "5,5");  // dash pattern (5 pixels dash, 5 pixels gap)
+
         // Create and append scatter plot points
         const circles = svg.selectAll(".dot")
             .data(combinedData)
