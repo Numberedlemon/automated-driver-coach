@@ -199,6 +199,8 @@
                 .attr("transform", "rotate(-90)")
                 .text("Steering Wheel Angle [ \u00B0]");
 
+                return yScale;
+
         };
 
         function createReference(data, lapnumber, plotType) {
@@ -246,10 +248,10 @@
             .nice()
             .range([0,width]);
 
-            const yScale = d3.scaleLinear()
-                        .domain(d3.extent(combinedData, d => d.steer))
-                        .nice()
-                        .range([height, 0]);
+                    const yScale = d3.scaleLinear()
+                                .domain(d3.extent(combinedData, d => d.steer))
+                                .nice()
+                                .range([height, 0]);
 
             const xAxis = d3.axisBottom(xScale);
 

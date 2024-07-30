@@ -121,8 +121,8 @@ def mini_sectors():
     df_Selected = df[df["LapNumber"] == lapSelect]
     df_Reference = df[df["LapNumber"] == lapReference]
 
-    df1 = discretise_lap(df_Selected, num_bins = 3, brake_threshold = 10)
-    df2 = discretise_lap(df_Reference, num_bins = 3, brake_threshold = 10)
+    df1 = discretise_lap(df_Selected, num_bins = 4, brake_threshold = 10)
+    df2 = discretise_lap(df_Reference, num_bins = 4, brake_threshold = 10)
 
     results = get_deltas(df2, df1)
 
